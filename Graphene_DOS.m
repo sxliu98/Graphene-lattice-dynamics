@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%                         Graphene_DOS                           %%%
+%%%                  Graphene_DOS_HeatCapacity                     %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear
@@ -12,121 +12,18 @@ newcolors = [234, 32, 39; 0, 98, 102; 27, 20, 100; 87, 88, 187; 111, 30, 81;
              247, 159, 31; 163, 203, 56; 18, 137, 167; 217, 128, 250; 181, 52, 113;
              255, 195, 18; 196, 229, 56; 18, 203, 196; 253, 167, 223; 237, 76, 103]./255; 
 %%
-[n1,n2,n3]=size(W);
-center=[(n1+1)/2,(n2+1)/2];
-A=[];
-W_new = W;
-for i=1:6
-    w=W_new(:,:,i);
-    z1=mean(mean(w(fix(center(1)):ceil(center(1)),fix(center(2)):ceil(center(2)))));%中心点z值
-    z2=mean(mean(w));
-    if z1>=z2
-        A(i)=1;
-    else
-        A(i)=2;
-    end
-end
-
-for t=1:5
-    a1=find(A==1);
-    a2=find(A==2);
-    if isempty(a1)==0
-        for i=1:n1
-            for j=1:n2
-                [~,b]=sort(W_new(i,j,a1));
-                b=b(:);
-                W_new(i,j,a1)=W_new(i,j,a1(b));
-            end
-        end
-    end
-    if isempty(a2)==0
-        for i=1:n1
-            for j=1:n2
-                [~,b]=sort(W_new(i,j,a2));
-                b=b(:);
-                W_new(i,j,a2)=W_new(i,j,a2(b));
-            end
-        end
-    end
-    for i=1:length(a1)
-        for j=1:length(a2)
-            w1=W_new(:,:,a1(i));
-            w2=W_new(:,:,a2(j));
-            a=find(isnan(X)==0);
-            b=find(abs(w1(a)-w2(a))<1e11);
-            if isempty(b)==0
-                xyz=[X(a(b)),Y(a(b)),w1(a(b))];
-                theta=[];
-                for k=1:size(xyz,1)
-                    if xyz(k,1)>0 && xyz(k,2)>0
-                        theta(k,1)=atan(xyz(k,2)/xyz(k,1));
-                    elseif xyz(k,1)>0 && xyz(k,2)<0
-                        theta(k,1)=atan(xyz(k,2)/xyz(k,1))+2*pi;
-                    elseif xyz(k,1)<0 && xyz(k,2)<0
-                        theta(k,1)=atan(xyz(k,2)/xyz(k,1))+pi;
-                    elseif xyz(k,1)<0 && xyz(k,2)>0
-                        theta(k,1)=atan(xyz(k,2)/xyz(k,1))+pi;
-                    elseif xyz(k,1)>0 && xyz(k,2)==0
-                        theta(k,1)=0;
-                    elseif xyz(k,1)==0 && xyz(k,2)<0
-                        theta(k,1)=1.5*pi;
-                    elseif xyz(k,1)<0 && xyz(k,2)==0
-                        theta(k,1)=pi;
-                    elseif xyz(k,1)==0 && xyz(k,2)>0
-                        theta(k,1)=0.5*pi;
-                    end 
-                end
-                [~,index]=sort(theta);
-                xyz=xyz(index,:);
-                xyz=[xyz;xyz(1,:)];
-                [in,on]=inpolygon(X(a),Y(a),xyz(:,1),xyz(:,2));
-                c1=[find(in==1);find(on==1)];
-                c1=unique(c1);
-                aa=a(c1);
-                c=setdiff(a,aa);
-                ww=[w1(c),w2(c)]';
-                w1(c)=min(ww);
-                w2(c)=max(ww);
-                W_new(:,:,a1(i))=w1;
-                W_new(:,:,a2(j))=w2;
-            end
-        end
-    end
-end
-%%
-mode = ["ZA";"TA";"LA";"ZO";"TO";"LO"];
-figure('OuterPosition',[100 100 1200 800])   
-tiledlayout(2,3)
-for i=1:6
-    nexttile
-    surfc(X*a0,Y*a0,W_new(:,:,i)/1e14,'EdgeAlpha',0.1),shading flat;
-    title(mode(i));
-    set(gca,'linewidth',1.5,'FontSize',14);
-    zlim([0 max(max(max(W_new)))/1e14]);
-    xlim([-2*pi/3-0.2,2*pi/3+0.2]);
-    ylim([-pi/sqrt(3)-0.2,pi/sqrt(3)+0.2]);
-    xlabel('$k_x a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
-    ylabel('$k_y a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
-    zlabel('$ \omega,10^{14} $ rad/s','Interpreter','latex','FontSize',20,'FontWeight','bold');
-    hold on
-    t=0:2*pi/6:2*pi;
-    y0=sin(t)*2*pi/3;x0=cos(t)*2*pi/3;
-    plot3(x0,y0,zeros(1,7),'b','linewidth',1)
-end
-cb = colorbar;
-cb.Layout.Tile = 'east';
-
-save frequency_mode.mat X Y W_new
-%%
+d = 4*pi/(3*sqrt(3));
+vertices = [0, d; d*sqrt(3)/2, d/2; d*sqrt(3)/2, -d/2;    
+            0, -d; -d*sqrt(3)/2, -d/2; -d*sqrt(3)/2, d/2; 0, d];  
 figure('OuterPosition',[100 100 1300 800])   
 tiledlayout(2,3)
 for i=1:6
     nexttile
-    [M,c]=contour(X*a0,Y*a0,W_new(:,:,i)/1e14,18);
+    [M,c]=contour(X*a0,Y*a0,W(:,:,i)/1e14,18);
     c.LineWidth = 2;
     hold on
     nn = 9;
-    [DX,DY] = gradient(W_new(1:nn:200,1:nn:200,i),2*pi/300/a0*nn,pi/sqrt(3)/100/a0*nn);
+    [DX,DY] = gradient(W(1:nn:200,1:nn:200,i),2*pi/300/a0*nn,pi/sqrt(3)/100/a0*nn);
     if i == 2 || i ==3
         DX(abs(DX)>3e4) = NaN; DY(abs(DY)>3e4) = NaN;
     else
@@ -136,16 +33,13 @@ for i=1:6
     quiver(X(1:nn:200,1:nn:200)*a0,Y(1:nn:200,1:nn:200)*a0,DX,DY,'k');
     title(mode(i));
     set(gca,'linewidth',1.5,'FontSize',14);
-    zlim([0 max(max(max(W_new)))/1e14]);
     xlim([-2*pi/3-0.2,2*pi/3+0.2]);
-    ylim([-pi/sqrt(3)-0.2,pi/sqrt(3)+0.2]);
+    ylim([-4*pi/(3*sqrt(3))-0.2,4*pi/(3*sqrt(3))+0.2]);
     xlabel('$k_x a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
     ylabel('$k_y a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
     zlabel('$ \omega,10^{14} $ rad/s','Interpreter','latex','FontSize',20,'FontWeight','bold');
     hold on
-    t=0:2*pi/6:2*pi;
-    y0=sin(t)*2*pi/3;x0=cos(t)*2*pi/3;
-    plot3(x0,y0,zeros(1,7),'b','linewidth',1)
+    plot(vertices(:, 1), vertices(:, 2), 'b-');
 end
 
 %%
@@ -153,7 +47,7 @@ figure('OuterPosition',[100 100 1300 800])
 tiledlayout(2,3)
 for i=1:6
     nexttile
-    [DX,DY] = gradient(W_new(:,:,i),2*pi/300/a0,pi/sqrt(3)/100/a0);
+    [DX,DY] = gradient(W(:,:,i),2*pi/300/a0,pi/sqrt(3)/100/a0);
     if i == 2 || i ==3
         DX(abs(DX)>3e4) = NaN; DY(abs(DY)>3e4) = NaN;
     else
@@ -164,20 +58,18 @@ for i=1:6
     title(mode(i));
     set(gca,'linewidth',1.5,'FontSize',14);
     xlim([-2*pi/3-0.2,2*pi/3+0.2]);
-    ylim([-pi/sqrt(3)-0.2,pi/sqrt(3)+0.2]);
+    ylim([-4*pi/(3*sqrt(3))-0.2,4*pi/(3*sqrt(3))+0.2]);
     xlabel('$k_x a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
     ylabel('$k_y a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
     zlabel('$ \omega,10^{14} $ rad/s','Interpreter','latex','FontSize',20,'FontWeight','bold');
     hold on
-    t=0:2*pi/6:2*pi;
-    y0=sin(t)*2*pi/3;x0=cos(t)*2*pi/3;
-    plot3(x0,y0,zeros(1,7),'b','linewidth',1)
+    plot(vertices(:, 1), vertices(:, 2), 'b-');
 end
 
 %%
 figure('OuterPosition',[100 100 600 450])   
 for i=1:6
-    [DX,DY] = gradient(W_new(:,:,i),2*pi/300/a0,pi/sqrt(3)/100/a0);
+    [DX,DY] = gradient(W(:,:,i),2*pi/300/a0,pi/sqrt(3)/100/a0);
     if i == 2 || i ==3
         DX(abs(DX)>3e4) = NaN; DY(abs(DY)>3e4) = NaN;
     else
@@ -186,7 +78,7 @@ for i=1:6
     DX([1:10,end-10:end],:) = NaN; DY([1:10,end-10:end],:) = NaN;
 
     vg = sqrt(DX.^2+DY.^2);
-    omega_i = W_new(1:16:200,1:16:200,i);
+    omega_i = W(1:16:200,1:16:200,i);
     omega = omega_i(:);
     vel = vg(1:16:200,1:16:200);
     velocity = vel(:);
@@ -202,23 +94,23 @@ end
 %%
 
 %%
-W_new([1:10,end-10:end],:) = NaN;
+W([1:10,end-10:end],:) = NaN;
 figure
 for i =1:6
-    Wi = W_new(:,:,i);
+    Wi = W(:,:,i);
     flatten_w = Wi(:);
-    bins = 0.01e14:1e12:3.05e14;
+    bins = 0.01:0.01:3.05;
     h = histogram(flatten_w,bins,'Normalization','pdf');
     hold on
     pdf(i,:) = h.Values;
-    frequency = (h.BinEdges(1:end-1)+h.BinEdges(2:end))/2;
+    frequency = (h.BinEdges(1:end-1)+h.BinEdges(2:end))/2*1e14;
 end
 set(gca,'linewidth',1.5,'FontSize',14);
 set(h,'edgecolor','none');
 xlabel('Frequency');
 ylabel('DOS');
-xlim([0 3e14])
-ylim([0 8e-14])
+xlim([0 3.2])
+ylim([0 5])
 %%
 newcolors = [234, 32, 39; 0, 98, 102; 27, 20, 100; 87, 88, 187; 111, 30, 81;
              238, 90, 36; 0, 148, 50; 6, 82, 221; 153, 128, 250; 131, 52, 113;
@@ -235,8 +127,8 @@ set(gca,'yticklabel',[])
 ylabel('$g(\omega)$ [a.u.]','Interpreter','latex','FontSize',20,'FontWeight','bold');
 legend('ZA','TA','LA','ZO','TO','LO','Total')
 legend boxoff
-xlim([0 3.5])
-ylim([0 5e-14])
+xlim([0 3.2])
+ylim([0 5])
 
 %%
 save DOS.mat frequency pdf
