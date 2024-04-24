@@ -79,27 +79,44 @@ for i = 1:kpoints
         D(4:6, 1:3) = -DBA;
         D(1:3, 1:3) = sum(KAB_I,3) + sum(KAA_II,3) + sum(KAB_III,3) + sum(KAB_IV1,3) + sum(KAB_IV2,3) + sum(KAA_V,3) - DAA;
         D(4:6, 4:6) = sum(KAB_I,3) + sum(KAA_II,3) + sum(KAB_III,3) + sum(KAB_IV1,3) + sum(KAB_IV2,3) + sum(KAA_V,3)- DBB;
-        e = eig(D);
-        w = sort(e);
-        omega(i,j,:) = real(sqrt(w))/sqrt(m);
+        D_out = [D(3,3),D(3,6);D(6,3),D(6,6)];
+        e1 = eig(D_out);
+        w1 = sort(e1);
+        W1(ii,jj,:) = real(sqrt(w1))/sqrt(m);
+
+        D_in = [D(1:2,1:2),D(1:2,4:5);D(4:5,1:2),D(4:5,4:5)];
+        e2 = eig(D_in);
+        w2 = sort(e2);
+        W2(ii,jj,:) = real(sqrt(w2))/sqrt(m);
     end
 end
 
-%% Plotting dispersion relationship
+W = cat(3,W1(:,:,1),W2(:,:,1),W2(:,:,2),W1(:,:,2),W2(:,:,3),W2(:,:,4))/1e14;
+
+mode = ["ZA";"TA";"LA";"ZO";"TO";"LO"];
+
+d = 4*pi/(3*sqrt(3));
+vertices = [0, d; d*sqrt(3)/2, d/2; d*sqrt(3)/2, -d/2;    
+            0, -d; -d*sqrt(3)/2, -d/2; -d*sqrt(3)/2, d/2; 0, d];                
+
 figure('OuterPosition',[100 100 1200 800])   
 for i=1:6
-    subplot(2,3,i); 
-    surfc(X,Y,omega(:,:,i),'EdgeAlpha',0.1),shading flat;
+    subplot(2, 3, i);
+    surfc(X*a,Y*a,W(:,:,i),'EdgeAlpha',0.1),shading flat;
+    title(mode(i));
     set(gca,'linewidth',1.5,'FontSize',14);
-    zlabel('ω', 'FontSize', 14);
-    xlabel("k_x",'FontSize', 14);
-    ylabel("k_y",'FontSize', 14);
+    zlim([0 3.1]);
+    xlim([-2*pi/3-0.2,2*pi/3+0.2]);
+    ylim([-4*pi/(3*sqrt(3))-0.2,4*pi/(3*sqrt(3))+0.2]);
+    xlabel('$k_x a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
+    ylabel('$k_y a$','Interpreter','latex','FontSize',20,'FontWeight','bold');
+    zlabel('$ \omega,10^{14} $ rad/s','Interpreter','latex','FontSize',20,'FontWeight','bold');
     hold on
-    t=0:2*pi/6:2*pi;
-    y0=sin(t)*2*pi/3;x0=cos(t)*2*pi/3;
-    plot3(x0.*(max(max(X))/max(x0)),y0.*(max(max(Y))/max(y0)),ones(1,7),'b','linewidth',1)
-%
+    plot(vertices(:, 1), vertices(:, 2), 'b-');
 end
+
+save data.mat X Y W
+
 %% Rotation function
 function [R, RB] = rotate(theta, r)
     Um = [cos(theta), sin(theta), 0; -sin(theta), cos(theta), 0; 0, 0, 1];
